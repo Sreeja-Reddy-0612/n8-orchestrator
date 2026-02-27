@@ -1,0 +1,16 @@
+{
+  "status": "success",
+  "result": {
+    "messages": [
+      {
+        "node": "step1",
+        "message": "Hello"
+      },
+      {
+        "node": "step2",
+        "message": "World"
+      }
+    ],
+    "metadata": {}
+  }
+}
