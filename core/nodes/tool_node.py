@@ -1,32 +1,18 @@
-from typing import Dict, Any
-from .base_node import BaseNode
-from core.tools.registry import tool_registry
-from core.tools.permissions import ToolPermissionManager
-import core.tools.builtins  # ensures builtin tools register
+class ToolNode:
+    def __init__(self, node_def):
+        self.node_def = node_def
 
+    def execute(self):
+        config = self.node_def.get("config", {})
+        tool_name = config.get("tool")
+        args = config.get("args", {})
 
-class ToolNode(BaseNode):
+        if tool_name == "math_add":
+            return self.math_add(args)
 
-    def execute(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        raise Exception(f"Unknown tool: {tool_name}")
 
-        tool_name = self.config.get("tool")
-        tool_args = self.config.get("args", {})
-
-        permission_manager = ToolPermissionManager(
-            allowed_tools=self.config.get("allowed_tools", [])
-        )
-
-        permission_manager.validate(tool_name)
-
-        tool_function = tool_registry.get(tool_name)
-
-        state = tool_function(state, **tool_args)
-
-        state.setdefault("trace", [])
-        state["trace"].append({
-            "node": self.name,
-            "type": "tool",
-            "tool_invoked": tool_name
-        })
-
-        return state
+    def math_add(self, args):
+        a = args.get("a", 0)
+        b = args.get("b", 0)
+        return {"sum": a + b}

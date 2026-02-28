@@ -1,28 +1,66 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import API from "../services/api";
 
-interface Props {
-  executionId: string;
+interface Execution {
+  execution_id: string;
+  status: string;
+  result?: any;
+  trace?: any;
 }
 
-export default function ExecutionDetail({ executionId }: Props) {
-  const [data, setData] = useState<any>(null);
+export default function ExecutionDetail() {
+  const { id } = useParams();
+  const [execution, setExecution] = useState<Execution | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDetail();
-  }, []);
+    const fetchExecution = async () => {
+      try {
+        const res = await API.get(`/workflow/executions/${id}`);
+        setExecution(res.data);
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const fetchDetail = async () => {
-    const res = await API.get(`/workflow/executions/${executionId}`);
-    setData(res.data);
-  };
+    if (id) {
+      fetchExecution();
+    }
+  }, [id]);
 
-  if (!data) return <p>Loading...</p>;
+  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
+
+  if (!execution)
+    return <div style={{ padding: 20 }}>Execution not found.</div>;
 
   return (
-    <div>
-      <h3>Execution Detail</h3>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
+    <div style={{ padding: 20 }}>
+      <h2>Execution Detail</h2>
+
+      <p>
+        <strong>ID:</strong> {execution.execution_id}
+      </p>
+
+      <p>
+        <strong>Status:</strong> {execution.status}
+      </p>
+
+      <h3>Result</h3>
+      <pre>
+        {execution.result
+          ? JSON.stringify(execution.result, null, 2)
+          : "No result"}
+      </pre>
+
+      <h3>Trace</h3>
+      <pre>
+        {execution.trace
+          ? JSON.stringify(execution.trace, null, 2)
+          : "No trace"}
+      </pre>
     </div>
   );
 }

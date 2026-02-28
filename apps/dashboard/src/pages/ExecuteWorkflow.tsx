@@ -1,33 +1,18 @@
 import { useState } from "react";
-import API from "../services/api";
+import { executeWorkflow } from "../services/api";
 
-export default function ExecuteWorkflow() {
-  const [executionId, setExecutionId] = useState<string | null>(null);
+function ExecuteWorkflow() {
   const [loading, setLoading] = useState(false);
 
-  const runWorkflow = async () => {
+  const handleRun = async () => {
+    if (loading) return;
+
     setLoading(true);
 
-    const payload = {
-      workflow_name: "tool_test",
-      start_at: "tool1",
-      nodes: [
-        {
-          name: "tool1",
-          type: "tool",
-          config: {
-            tool: "math_add",
-            args: { a: 5, b: 7 },
-          },
-          next: null,
-        },
-      ],
-    };
-
     try {
-      const res = await API.post("/workflow/execute", payload);
-      setExecutionId(res.data.execution_id);
-    } catch (err) {
+      await executeWorkflow();
+      alert("Workflow executed successfully");
+    } catch (error) {
       alert("Execution failed");
     }
 
@@ -36,16 +21,11 @@ export default function ExecuteWorkflow() {
 
   return (
     <div>
-      <h2>Execute Workflow</h2>
-      <button onClick={runWorkflow} disabled={loading}>
+      <button onClick={handleRun} disabled={loading}>
         {loading ? "Running..." : "Run Workflow"}
       </button>
-
-      {executionId && (
-        <p>
-          Execution ID: <strong>{executionId}</strong>
-        </p>
-      )}
     </div>
   );
 }
+
+export default ExecuteWorkflow;

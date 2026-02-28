@@ -1,17 +1,15 @@
-import ExecuteWorkflow from "./pages/ExecuteWorkflow";
-import Executions from "./pages/Executions";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
+import ExecutionDetail from "./pages/ExecutionDetail";
 
 function App() {
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>N8 Orchestrator Dashboard</h1>
-
-      <ExecuteWorkflow />
-
-      <hr />
-
-      <Executions />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/execution/:id" element={<ExecutionDetail />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
