@@ -1,23 +1,44 @@
-from typing import Dict, Any
-from .base_node import BaseNode
+from core.nodes.base_node import BaseNode
 
 
 class ConditionNode(BaseNode):
+    def run(self, state: dict):
+        variable = self.config["variable"]
+        operator = self.config["operator"]
+        value = self.config["value"]
+        true_next = self.config["true_next"]
+        false_next = self.config["false_next"]
 
-    def execute(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        key = self.config.get("condition_key")
-        equals = self.config.get("equals")
+        # Extract numeric value properly
+        node_output = state.get(variable)
 
-        value = state.get(key)
+        if isinstance(node_output, dict):
+            # If tool output like {"sum": 15}
+            current_value = list(node_output.values())[0]
+        else:
+            current_value = node_output
 
-        state.setdefault("trace", [])
-        state["trace"].append({
+        condition_met = False
+
+        if operator == ">":
+            condition_met = current_value > value
+        elif operator == "<":
+            condition_met = current_value < value
+        elif operator == "==":
+            condition_met = current_value == value
+
+        next_node = true_next if condition_met else false_next
+
+        trace_entry = {
             "node": self.name,
             "type": "condition",
-            "evaluated_key": key,
-            "value": value
-        })
+            "evaluated": {
+                "variable": variable,
+                "value": current_value,
+                "operator": operator,
+                "compare_to": value,
+                "result": condition_met,
+            },
+        }
 
-        state["_condition_result"] = (value == equals)
-
-        return state
+        return None, trace_entry, next_node

@@ -1,18 +1,27 @@
-class ToolNode:
-    def __init__(self, node_def):
-        self.node_def = node_def
+from core.nodes.base_node import BaseNode
 
-    def execute(self):
-        config = self.node_def.get("config", {})
-        tool_name = config.get("tool")
-        args = config.get("args", {})
+
+class ToolNode(BaseNode):
+    def run(self, state: dict):
+        tool_name = self.config.get("tool")
+        args = self.config.get("args", {})
 
         if tool_name == "math_add":
-            return self.math_add(args)
+            result = {"sum": args["a"] + args["b"]}
 
-        raise Exception(f"Unknown tool: {tool_name}")
+        elif tool_name == "math_multiply":
+            result = {"product": args["a"] * args["b"]}
 
-    def math_add(self, args):
-        a = args.get("a", 0)
-        b = args.get("b", 0)
-        return {"sum": a + b}
+        else:
+            raise Exception(f"Unknown tool: {tool_name}")
+
+        state[self.name] = result
+
+        trace_entry = {
+            "node": self.name,
+            "type": "tool",
+            "tool_invoked": tool_name,
+            "output": result,
+        }
+
+        return result, trace_entry, self.next

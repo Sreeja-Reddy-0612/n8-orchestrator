@@ -1,55 +1,71 @@
 import uuid
-from core.nodes.tool_node import ToolNode
+from core.registry import NODE_REGISTRY
+from core.persistence.checkpoint import save_execution
 
 
 class WorkflowExecutor:
-    def __init__(self, workflow_def):
-        self.workflow_def = workflow_def
+    def __init__(self, workflow: dict):
+        self.workflow = workflow
         self.execution_id = str(uuid.uuid4())
+        self.state = {}
         self.trace = []
-        self.result = {}
         self.status = "running"
 
-    def run(self):
+        # Map nodes by name
+        self.nodes = {
+            node["name"]: node
+            for node in workflow["nodes"]
+        }
+
+    def execute(self):
+        current_node_name = self.workflow["start_at"]
+        step_count = 0
+        MAX_STEPS = 50
+
         try:
-            start_node_name = self.workflow_def.get("start_at")
-            nodes = {
-                node["name"]: node
-                for node in self.workflow_def.get("nodes", [])
-            }
+            while current_node_name:
+                if step_count > MAX_STEPS:
+                    raise Exception("Infinite loop detected")
 
-            current_node = nodes.get(start_node_name)
+                step_count += 1
 
-            while current_node:
-                node_type = current_node.get("type")
+                node_config = self.nodes.get(current_node_name)
 
-                if node_type == "tool":
-                    tool_node = ToolNode(current_node)
-                    output = tool_node.execute()
+                if not node_config:
+                    raise Exception(f"Node not found: {current_node_name}")
 
-                    self.trace.append({
-                        "node": current_node["name"],
-                        "type": "tool",
-                        "tool_invoked": current_node["config"]["tool"],
-                        "output": output
-                    })
+                node_type = node_config["type"]
 
-                    self.result[current_node["name"]] = output
+                node_class = NODE_REGISTRY.get(node_type)
 
-                next_node = current_node.get("next")
-                current_node = nodes.get(next_node) if next_node else None
+                if not node_class:
+                    raise Exception(f"Unsupported node type: {node_type}")
+
+                node_instance = node_class(node_config)
+
+                result, trace_entry, next_node = node_instance.run(self.state)
+
+                if trace_entry:
+                    self.trace.append(trace_entry)
+
+                current_node_name = next_node
 
             self.status = "completed"
 
         except Exception as e:
             self.status = "failed"
-            self.trace.append({
-                "error": str(e)
-            })
+            self.trace.append({"error": str(e)})
+
+        save_execution(
+            self.execution_id,
+            self.status,
+            self.state,
+            self.trace
+        )
 
         return {
             "execution_id": self.execution_id,
             "status": self.status,
-            "result": self.result,
-            "trace": self.trace
+            "result": self.state,
+            "trace": self.trace,
         }

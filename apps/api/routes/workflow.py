@@ -1,26 +1,19 @@
 from fastapi import APIRouter
 from core.nodes.executor import WorkflowExecutor
-from core.persistence.checkpoint import (
-    save_execution,
-    get_execution,
-    list_executions
-)
+from core.persistence.checkpoint import list_executions, get_execution
 
-router = APIRouter(prefix="/workflow")
+router = APIRouter(prefix="/workflow", tags=["Workflow"])
 
 
 @router.post("/execute")
 def execute_workflow(workflow: dict):
     executor = WorkflowExecutor(workflow)
-    result = executor.run()
-
-    save_execution(result)
-
+    result = executor.execute()
     return result
 
 
 @router.get("/executions")
-def get_executions():
+def get_all_executions():
     return list_executions()
 
 

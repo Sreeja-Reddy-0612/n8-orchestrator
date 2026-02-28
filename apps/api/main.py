@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from apps.api.lifecycle import register_lifecycle_events
 from apps.api.routes.workflow import router as workflow_router
+from core.persistence.checkpoint import init_db
 
 app = FastAPI(
     title="N8 Orchestrator - Phase 4",
@@ -17,6 +18,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+init_db()
 
 register_lifecycle_events(app)
 

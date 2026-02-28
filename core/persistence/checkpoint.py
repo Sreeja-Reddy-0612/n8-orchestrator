@@ -21,19 +21,18 @@ def init_db():
     conn.close()
 
 
-def save_execution(execution):
+def save_execution(execution_id, status, result, trace):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT OR REPLACE INTO executions 
-        (execution_id, status, result, trace)
+        INSERT INTO executions (execution_id, status, result, trace)
         VALUES (?, ?, ?, ?)
     """, (
-        execution["execution_id"],
-        execution["status"],
-        json.dumps(execution["result"]),
-        json.dumps(execution["trace"])
+        execution_id,
+        status,
+        json.dumps(result),
+        json.dumps(trace)
     ))
 
     conn.commit()
@@ -44,13 +43,9 @@ def list_executions():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT execution_id, status 
-        FROM executions
-        ORDER BY rowid DESC
-    """)
-
+    cursor.execute("SELECT execution_id, status FROM executions ORDER BY ROWID DESC")
     rows = cursor.fetchall()
+
     conn.close()
 
     return [
@@ -63,17 +58,16 @@ def get_execution(execution_id):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT execution_id, status, result, trace
-        FROM executions
-        WHERE execution_id = ?
-    """, (execution_id,))
+    cursor.execute(
+        "SELECT execution_id, status, result, trace FROM executions WHERE execution_id = ?",
+        (execution_id,)
+    )
 
     row = cursor.fetchone()
     conn.close()
 
     if not row:
-        return None
+        return {"error": "Execution not found"}
 
     return {
         "execution_id": row[0],
