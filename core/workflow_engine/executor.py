@@ -13,8 +13,9 @@ NODE_TYPE_MAP = {
 
 class WorkflowExecutor:
 
-    def __init__(self, workflow_def):
+    def __init__(self, workflow_def, execution_id=None):
         self.workflow_def = workflow_def
+        self.execution_id = execution_id
         self.parser = WorkflowParser(workflow_def)
 
     def execute(self):

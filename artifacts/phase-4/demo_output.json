@@ -1,0 +1,11 @@
+{
+  "frontend_triggered": true,
+  "backend_status": "running",
+  "execution_store": "in_memory",
+  "execution_history_visible": true,
+  "sample_execution": {
+    "execution_id": "1bd9a81d-c878-4ab4-b80c-a8c1acd44667",
+    "status": "completed"
+  },
+  "integration_status": "success"
+}
