@@ -1,0 +1,19 @@
+{
+  "status": "success",
+  "result": {
+    "messages": [
+      {
+        "node": "math_tool",
+        "message": "Result: 12"
+      }
+    ],
+    "trace": [
+      {
+        "node": "tool1",
+        "type": "tool",
+        "tool_invoked": "math_add"
+      }
+    ],
+    "math_result": 12
+  }
+}

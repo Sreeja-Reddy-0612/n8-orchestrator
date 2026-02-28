@@ -1,14 +1,12 @@
-import yaml
-from typing import Dict, Any
-
-
 class WorkflowParser:
-    """
-    Parses YAML workflow definition into Python dictionary.
-    """
 
-    @staticmethod
-    def parse_yaml(file_path: str) -> Dict[str, Any]:
-        with open(file_path, "r") as f:
-            data = yaml.safe_load(f)
-        return data
+    def __init__(self, workflow_def: dict):
+        self.workflow_def = workflow_def
+
+    def parse_nodes(self):
+        nodes = {}
+
+        for node in self.workflow_def.get("nodes", []):
+            nodes[node["name"]] = node
+
+        return nodes

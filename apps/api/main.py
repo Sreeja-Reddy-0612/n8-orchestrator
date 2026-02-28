@@ -1,11 +1,17 @@
 from fastapi import FastAPI
-from apps.api.routes import workflow
+from apps.api.lifecycle import register_lifecycle_events
+from apps.api.routes.workflow import router as workflow_router
 
-app = FastAPI(title="N8 Orchestrator - Phase 1")
+app = FastAPI(
+    title="N8 Orchestrator - Phase 3",
+    version="0.3.0"
+)
 
-app.include_router(workflow.router, prefix="/workflow", tags=["Workflow"])
+register_lifecycle_events(app)
+
+app.include_router(workflow_router)
 
 
 @app.get("/")
-def health():
-    return {"status": "running"}
+def root():
+    return {"status": "N8 Orchestrator running"}
