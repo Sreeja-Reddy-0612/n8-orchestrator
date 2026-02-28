@@ -1,0 +1,32 @@
+{
+  "status": "success",
+  "result": {
+    "messages": [
+      {
+        "node": "step1",
+        "message": "Start"
+      },
+      {
+        "node": "stepB",
+        "message": "Path B"
+      }
+    ],
+    "metadata": {},
+    "trace": [
+      {
+        "node": "step1",
+        "type": "tool"
+      },
+      {
+        "node": "decision",
+        "type": "condition",
+        "evaluated_key": "route",
+        "value": null
+      },
+      {
+        "node": "stepB",
+        "type": "tool"
+      }
+    ]
+  }
+}
