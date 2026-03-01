@@ -1,21 +1,16 @@
-from core.nodes.base_node import BaseNode
+def execute_llm_node(node, state):
 
+    prompt = node["config"]["prompt"]
 
-class LLMNode(BaseNode):
-    def run(self, state: dict):
-        prompt = self.config.get("prompt", "")
+    response = f"LLM processed: {prompt}"
 
-        output = {
-            "response": f"LLM processed: {prompt}"
+    output = {
+        "node": node["name"],
+        "type": "llm",
+        "prompt": prompt,
+        "output": {
+            "response": response
         }
+    }
 
-        state[self.name] = output
-
-        trace_entry = {
-            "node": self.name,
-            "type": "llm",
-            "prompt": prompt,
-            "output": output,
-        }
-
-        return output, trace_entry, self.next
+    return output

@@ -1,116 +1,102 @@
 import uuid
 import time
-from core.registry import NODE_REGISTRY
-from core.persistence.checkpoint import save_execution
+
+from core.nodes.tool_node import execute_tool_node
+from core.nodes.condition_node import execute_condition_node
+from core.nodes.llm_node import execute_llm_node
 
 
 class WorkflowExecutor:
 
-    def __init__(self, workflow: dict):
+    def __init__(self, workflow):
         self.workflow = workflow
-        self.execution_id = str(uuid.uuid4())
+        self.nodes = {node["name"]: node for node in workflow.get("nodes", [])}
         self.state = {}
         self.trace = []
-        self.status = "running"
+        self.execution_id = str(uuid.uuid4())
+        self.completed = set()
+        self.failed = set()
 
-        self.nodes = {
-            node["name"]: node
-            for node in workflow["nodes"]
-        }
+    def _execute_node(self, node):
 
-        self.MAX_STEPS = 100
+        retry_config = node.get("retry", {})
+        max_retries = retry_config.get("max_retries", 0)
+        delay_seconds = retry_config.get("delay_seconds", 0)
+
+        attempts = 0
+
+        while attempts <= max_retries:
+            try:
+                node_type = node["type"]
+
+                if node_type == "tool":
+                    result = execute_tool_node(node, self.state)
+                elif node_type == "condition":
+                    result = execute_condition_node(node, self.state)
+                elif node_type == "llm":
+                    result = execute_llm_node(node, self.state)
+                else:
+                    raise Exception(f"Unknown node type: {node_type}")
+
+                # Store full result in state
+                self.state[node["name"]] = result
+                self.trace.append(result)
+                self.completed.add(node["name"])
+                return
+
+            except Exception as e:
+                attempts += 1
+
+                if attempts > max_retries:
+                    self.failed.add(node["name"])
+                    self.trace.append({
+                        "node": node["name"],
+                        "type": node.get("type"),
+                        "error": str(e),
+                        "status": "failed"
+                    })
+                    return
+
+                time.sleep(delay_seconds)
 
     def execute(self):
-        current_node_name = self.workflow["start_at"]
-        step_count = 0
 
-        try:
-            while current_node_name:
+        total_nodes = len(self.nodes)
 
-                if step_count > self.MAX_STEPS:
-                    raise Exception("Max step limit exceeded (possible infinite loop)")
+        if total_nodes == 0:
+            raise Exception("No nodes provided in workflow.")
 
-                node_config = self.nodes[current_node_name]
-                node_type = node_config["type"]
+        while len(self.completed) + len(self.failed) < total_nodes:
 
-                node_class = NODE_REGISTRY[node_type]
-                node_instance = node_class(node_config)
+            progress_made = False
 
-                # 🔥 Phase 7: Retry + Timeout Support
-                result, trace_entry, next_node = self._execute_with_retry(
-                    node_instance,
-                    node_config
+            for node_name, node in self.nodes.items():
+
+                if node_name in self.completed or node_name in self.failed:
+                    continue
+
+                dependencies = node.get("depends_on", [])
+
+                # Validate dependency names exist
+                for dep in dependencies:
+                    if dep not in self.nodes:
+                        raise Exception(f"Dependency '{dep}' not found in workflow nodes.")
+
+                # Execute only when all dependencies are completed
+                if all(dep in self.completed for dep in dependencies):
+                    self._execute_node(node)
+                    progress_made = True
+
+            if not progress_made:
+                raise Exception(
+                    "Deadlock detected: Circular dependency or unresolved dependencies."
                 )
 
-                if trace_entry:
-                    self.trace.append(trace_entry)
-
-                current_node_name = next_node
-                step_count += 1
-
-            self.status = "completed"
-
-        except Exception as e:
-            self.status = "failed"
-            self.trace.append({
-                "error": str(e)
-            })
-
-        # Save execution (success or failure)
-        save_execution(
-            self.execution_id,
-            self.status,
-            self.state,
-            self.trace
-        )
+        status = "completed" if not self.failed else "failed"
 
         return {
             "execution_id": self.execution_id,
-            "status": self.status,
+            "status": status,
             "result": self.state,
-            "trace": self.trace,
+            "trace": self.trace
         }
-
-    # 🔥 NEW PHASE 7 METHOD
-    def _execute_with_retry(self, node_instance, node_config):
-
-        retry_config = node_config.get("retry", {})
-        max_retries = retry_config.get("max_retries", 0)
-        delay = retry_config.get("delay_seconds", 0)
-        timeout = retry_config.get("timeout_seconds", None)
-
-        attempt = 0
-
-        while True:
-            try:
-                start_time = time.time()
-
-                result, trace_entry, next_node = node_instance.run(self.state)
-
-                # Timeout check
-                if timeout:
-                    elapsed = time.time() - start_time
-                    if elapsed > timeout:
-                        raise Exception(
-                            f"Node timeout exceeded ({timeout}s)"
-                        )
-
-                return result, trace_entry, next_node
-
-            except Exception as e:
-                attempt += 1
-
-                if attempt > max_retries:
-                    raise Exception(
-                        f"Node failed after {max_retries} retries: {str(e)}"
-                    )
-
-                # Add retry trace entry
-                self.trace.append({
-                    "node": node_config["name"],
-                    "retry_attempt": attempt,
-                    "error": str(e)
-                })
-
-                if delay > 0:
-                    time.sleep(delay)

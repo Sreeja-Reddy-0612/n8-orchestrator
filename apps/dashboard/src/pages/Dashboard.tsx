@@ -16,17 +16,32 @@ export default function Dashboard() {
     setLoading(true);
 
     const payload = {
-      workflow_name: "math_workflow",
-      start_at: "tool1",
       nodes: [
         {
-          name: "tool1",
+          name: "add_node",
           type: "tool",
+          depends_on: [],
           config: {
             tool: "math_add",
-            args: { a: 10, b: 20 }
-          },
-          next: null
+            args: { a: 10, b: 5 }
+          }
+        },
+        {
+          name: "multiply_node",
+          type: "tool",
+          depends_on: [],
+          config: {
+            tool: "math_add",
+            args: { a: 20, b: 10 }
+          }
+        },
+        {
+          name: "llm_node",
+          type: "llm",
+          depends_on: ["add_node", "multiply_node"],
+          config: {
+            prompt: "Both root branches finished."
+          }
         }
       ]
     };
@@ -34,7 +49,10 @@ export default function Dashboard() {
     try {
       const res = await API.post("/workflow/execute", payload);
       setExecutionId(res.data.execution_id);
-      fetchExecutions();
+
+      // 🔥 Immediately refresh history
+      await fetchExecutions();
+
     } catch (error) {
       console.error("Execution failed:", error);
     } finally {

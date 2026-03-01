@@ -1,44 +1,40 @@
-from core.nodes.base_node import BaseNode
+def execute_condition_node(node, state):
 
+    config = node["config"]
+    variable = config["variable"]
+    operator = config["operator"]
+    compare_to = config["value"]
 
-class ConditionNode(BaseNode):
-    def run(self, state: dict):
-        variable = self.config["variable"]
-        operator = self.config["operator"]
-        value = self.config["value"]
-        true_next = self.config["true_next"]
-        false_next = self.config["false_next"]
+    if variable not in state:
+        raise Exception(f"Dependency '{variable}' not found in state.")
 
-        # Extract numeric value properly
-        node_output = state.get(variable)
+    previous_output = state[variable]
 
-        if isinstance(node_output, dict):
-            # If tool output like {"sum": 15}
-            current_value = list(node_output.values())[0]
-        else:
-            current_value = node_output
+    # Extract nested tool output safely
+    value = previous_output.get("output", {}).get("sum")
 
-        condition_met = False
+    if value is None:
+        raise Exception(f"No 'sum' found in output of '{variable}'.")
 
-        if operator == ">":
-            condition_met = current_value > value
-        elif operator == "<":
-            condition_met = current_value < value
-        elif operator == "==":
-            condition_met = current_value == value
+    if operator == ">":
+        result = value > compare_to
+    elif operator == "<":
+        result = value < compare_to
+    elif operator == "==":
+        result = value == compare_to
+    else:
+        raise Exception("Unsupported operator")
 
-        next_node = true_next if condition_met else false_next
-
-        trace_entry = {
-            "node": self.name,
-            "type": "condition",
-            "evaluated": {
-                "variable": variable,
-                "value": current_value,
-                "operator": operator,
-                "compare_to": value,
-                "result": condition_met,
-            },
+    output = {
+        "node": node["name"],
+        "type": "condition",
+        "evaluated": {
+            "variable": variable,
+            "value": value,
+            "operator": operator,
+            "compare_to": compare_to,
+            "result": result
         }
+    }
 
-        return None, trace_entry, next_node
+    return output
